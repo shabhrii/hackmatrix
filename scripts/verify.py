@@ -310,7 +310,17 @@ def gate_cp3():
     return ok
 
 
-GATES = {0: gate_cp0, 1: gate_cp1, 2: gate_cp2, 3: gate_cp3}
+def gate_cp4():
+    print("\n--- CP4: Rule engine, ledger, scoring ---\n")
+    import sys
+    ok = True
+    
+    r = run([sys.executable, "-m", "pytest", str(ROOT / "backend" / "tests" / "test_engine.py")], capture=True)
+    ok &= check("pytest reproduces testing matrix and golden file", r.returncode == 0, r.stderr[-200:] if r.returncode != 0 else r.stdout[-200:])
+    return ok
+
+
+GATES = {0: gate_cp0, 1: gate_cp1, 2: gate_cp2, 3: gate_cp3, 4: gate_cp4}
 
 
 def main():
