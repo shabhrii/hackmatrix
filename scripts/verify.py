@@ -248,6 +248,8 @@ def gate_cp2():
     row = conn.execute("SELECT source_id, ingested_at FROM access_events LIMIT 1").fetchone()
     ok &= check("provenance: source_id present", row["source_id"] is not None and row["source_id"] != "")
     ok &= check("provenance: ingested_at present", row["ingested_at"] is not None and row["ingested_at"] != "")
+    
+    conn.close()
 
     conn.close()
 
@@ -304,6 +306,8 @@ def gate_cp3():
         p7 = eng.peer_percentile("E-0901")
         ok &= check(f"small peer group returns 'unavailable' (got {p7})", p7 == "unavailable")
         
+        eng.conn.close()
+        
     except Exception as e:
         ok &= check("CP3 logic executed", False, str(e))
         
@@ -320,7 +324,17 @@ def gate_cp4():
     return ok
 
 
-GATES = {0: gate_cp0, 1: gate_cp1, 2: gate_cp2, 3: gate_cp3, 4: gate_cp4}
+def gate_cp5():
+    print("\n--- CP5: API, cases, audit, export ---\n")
+    import sys
+    ok = True
+    
+    r = run([sys.executable, "-m", "pytest", str(ROOT / "backend" / "tests" / "test_api.py")], capture=True)
+    ok &= check("API test suite passes", r.returncode == 0, r.stdout + "\n" + r.stderr if r.returncode != 0 else "")
+    return ok
+
+
+GATES = {0: gate_cp0, 1: gate_cp1, 2: gate_cp2, 3: gate_cp3, 4: gate_cp4, 5: gate_cp5}
 
 
 def main():
