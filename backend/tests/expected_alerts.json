@@ -1,0 +1,77 @@
+{
+  "S1": {
+    "rules_triggered": [
+      "R-03",
+      "R-04"
+    ],
+    "severity": "high",
+    "score": 87,
+    "confidence": 0.87,
+    "evidence_count": 3,
+    "evidence_ids": [
+      "A-19",
+      "P-07",
+      "T-88"
+    ],
+    "alert_generated": true
+  },
+  "S2": {
+    "rules_triggered": [
+      "R-05"
+    ],
+    "severity": "medium",
+    "alert_generated": true
+  },
+  "S2b": {
+    "rules_triggered": [],
+    "r05_triggered": false,
+    "alert_generated": false
+  },
+  "S3": {
+    "rules_triggered": [
+      "R-06"
+    ],
+    "severity": "medium",
+    "alert_generated": true
+  },
+  "S4": {
+    "rules_triggered": [
+      "R-02"
+    ],
+    "r02_status": "informational",
+    "alert_generated": false,
+    "monitored": true,
+    "monitored_reasons": [
+      "batch_operator_role",
+      "approved_job",
+      "expected_shift",
+      "peer_baseline"
+    ]
+  },
+  "S5": {
+    "rules_triggered": [
+      "R-03"
+    ],
+    "r03_severity": "medium",
+    "r04_status": "insufficient_evidence",
+    "severity": "medium",
+    "recommended_action": "manual_review",
+    "never_high": true,
+    "alert_generated": true
+  },
+  "S6": {
+    "rules_triggered": [
+      "R-01"
+    ],
+    "alert_generated": true
+  },
+  "S7": {
+    "r07_status": "insufficient_evidence",
+    "r08_status": "suppressed",
+    "alert_generated": false
+  },
+  "S8": {
+    "r03_triggered": false,
+    "alert_generated": false
+  }
+}
