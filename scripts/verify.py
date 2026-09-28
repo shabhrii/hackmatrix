@@ -277,7 +277,40 @@ def gate_cp2():
     return ok
 
 
-GATES = {0: gate_cp0, 1: gate_cp1, 2: gate_cp2}
+def gate_cp3():
+    print("\n--- CP3: Graph and feature layer ---\n")
+    import sys
+    sys.path.insert(0, str(BACKEND))
+    from engine import Engine
+    db_path = BACKEND / "sentinelgraph.db"
+    
+    ok = True
+    try:
+        eng = Engine(db_path)
+        
+        # S1 shortest path
+        path = eng.shortest_evidence_path("E-0417", "T-88")
+        ok &= check("shortest path from E-0417 to T-88", path == ["A-19", "P-07", "T-88"], str(path))
+        
+        # Peer percentile for E-0417 (S1)
+        p1 = eng.peer_percentile("E-0417")
+        ok &= check(f"E-0417 peer percentile is >= 99 (got {p1})", isinstance(p1, (int, float)) and p1 >= 99)
+        
+        # S4 operator inside peer baseline
+        p4 = eng.peer_percentile("E-0880")
+        ok &= check(f"S4 operator E-0880 inside baseline (got {p4})", isinstance(p4, (int, float)) and p4 <= 98)
+        
+        # Small peer group
+        p7 = eng.peer_percentile("E-0901")
+        ok &= check(f"small peer group returns 'unavailable' (got {p7})", p7 == "unavailable")
+        
+    except Exception as e:
+        ok &= check("CP3 logic executed", False, str(e))
+        
+    return ok
+
+
+GATES = {0: gate_cp0, 1: gate_cp1, 2: gate_cp2, 3: gate_cp3}
 
 
 def main():
