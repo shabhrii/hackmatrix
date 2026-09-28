@@ -855,7 +855,7 @@ def generate():
         {"file": "negative_amount.csv", "content": "txn_id,source_account,destination_account,amount,currency,timestamp\nBAD-AMT-01,ACC-0001,ACC-0002,-5000,INR,2026-09-15T10:00:00Z\n", "reason": "negative amount"},
         {"file": "unknown_entity.csv", "content": "event_id,employee_id,customer_id,timestamp\nBAD-ENT-01,E-9999,C-9999,2026-09-15T10:00:00Z\n", "reason": "unknown entity reference"},
         {"file": "duplicate_event.csv", "content": "event_id,employee_id,timestamp\nA-19,E-0417,2026-09-15T14:02:00Z\n", "reason": "duplicate event_id"},
-        {"file": "ambiguous_account.csv", "content": "event_id,employee_id,account_id,timestamp\nBAD-AMB-01,E-0417,ACC-AMBIGUOUS,2026-09-15T10:00:00Z\n", "reason": "ambiguous account reference"},
+        {"file": "ambiguous_account.csv", "content": "event_id,employee_id,account_id,timestamp\nBAD-AMB-01,E-0417,ACC-AMBIGUOUS,2026-09-15T10:00:00Z\n", "reason": "unknown entity reference: account_id=ACC-AMBIGUOUS"},
     ]
     for rec in bad_records:
         (BAD_DIR / rec["file"]).parent.mkdir(parents=True, exist_ok=True)

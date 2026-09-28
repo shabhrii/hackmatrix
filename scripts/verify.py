@@ -206,7 +206,78 @@ def gate_cp1():
     return ok
 
 
-GATES = {0: gate_cp0, 1: gate_cp1}
+def gate_cp2():
+    print("\n--- CP2: Ingestion and normalization ---\n")
+    import time as _time
+    import json
+    python = sys.executable
+    ok = True
+
+    # reset_demo.py should rebuild from scratch
+    start = _time.time()
+    r = run([python, str(ROOT / "scripts" / "reset_demo.py")], capture=True)
+    elapsed = _time.time() - start
+    ok &= check("reset_demo.py succeeds", r.returncode == 0, r.stderr[-200:] if r.returncode != 0 else "")
+    ok &= check(f"reset under 10s ({elapsed:.1f}s)", elapsed < 10)
+
+    # check zero quarantined records from good data
+    import sqlite3
+    db_path = BACKEND / "sentinelgraph.db"
+    conn = sqlite3.connect(str(db_path))
+    conn.row_factory = sqlite3.Row
+    q_count = conn.execute("SELECT COUNT(*) FROM quarantine").fetchone()[0]
+    ok &= check(f"zero quarantined from good data (got {q_count})", q_count == 0)
+
+    # check data was actually loaded
+    emp_count = conn.execute("SELECT COUNT(*) FROM employees").fetchone()[0]
+    ok &= check(f"employees loaded ({emp_count})", emp_count > 40)
+
+    txn_count = conn.execute("SELECT COUNT(*) FROM transactions").fetchone()[0]
+    ok &= check(f"transactions loaded ({txn_count})", txn_count > 5000)
+
+    access_count = conn.execute("SELECT COUNT(*) FROM access_events").fetchone()[0]
+    ok &= check(f"access events loaded ({access_count})", access_count > 11000)
+
+    config_count = conn.execute("SELECT COUNT(*) FROM config").fetchone()[0]
+    ok &= check(f"config loaded ({config_count})", config_count > 0)
+
+    batch_count = conn.execute("SELECT COUNT(*) FROM batch_jobs").fetchone()[0]
+    ok &= check(f"batch_jobs loaded ({batch_count})", batch_count > 0)
+
+    # check provenance retained
+    row = conn.execute("SELECT source_id, ingested_at FROM access_events LIMIT 1").fetchone()
+    ok &= check("provenance: source_id present", row["source_id"] is not None and row["source_id"] != "")
+    ok &= check("provenance: ingested_at present", row["ingested_at"] is not None and row["ingested_at"] != "")
+
+    conn.close()
+
+    # now load bad data and check quarantine
+    sys.path.insert(0, str(BACKEND))
+    from ingestion import ingest_bad_data
+    bad_dir = ROOT / "data" / "seed" / "bad"
+    ingest_bad_data(db_path, bad_dir)
+
+    conn = sqlite3.connect(str(db_path))
+    conn.row_factory = sqlite3.Row
+    q_rows = conn.execute("SELECT * FROM quarantine").fetchall()
+    bad_reasons = [r["reason"] for r in q_rows]
+    ok &= check(f"bad data quarantined ({len(q_rows)} records)", len(q_rows) >= 5)
+
+    # verify expected quarantine reasons
+    with open(bad_dir / "expected_quarantine.json", encoding="utf-8") as f:
+        expected = json.load(f)
+    for exp in expected:
+        found = any(exp["reason"] in r for r in bad_reasons)
+        ok &= check(f"quarantine reason: {exp['reason']}", found)
+
+    # pipeline did not crash
+    ok &= check("pipeline did not crash on bad data", True)
+
+    conn.close()
+    return ok
+
+
+GATES = {0: gate_cp0, 1: gate_cp1, 2: gate_cp2}
 
 
 def main():
