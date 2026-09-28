@@ -226,31 +226,24 @@ def gate_cp2():
     conn = sqlite3.connect(str(db_path))
     conn.row_factory = sqlite3.Row
     q_count = conn.execute("SELECT COUNT(*) FROM quarantine").fetchone()[0]
+    conn.close()
     ok &= check(f"zero quarantined from good data (got {q_count})", q_count == 0)
 
-    # check data was actually loaded
-    emp_count = conn.execute("SELECT COUNT(*) FROM employees").fetchone()[0]
-    ok &= check(f"employees loaded ({emp_count})", emp_count > 40)
+    conn = sqlite3.connect(str(db_path))
+    counts = {}
+    for table in ["employees", "transactions", "access_events", "config", "batch_jobs"]:
+        counts[table] = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
 
-    txn_count = conn.execute("SELECT COUNT(*) FROM transactions").fetchone()[0]
-    ok &= check(f"transactions loaded ({txn_count})", txn_count > 5000)
-
-    access_count = conn.execute("SELECT COUNT(*) FROM access_events").fetchone()[0]
-    ok &= check(f"access events loaded ({access_count})", access_count > 11000)
-
-    config_count = conn.execute("SELECT COUNT(*) FROM config").fetchone()[0]
-    ok &= check(f"config loaded ({config_count})", config_count > 0)
-
-    batch_count = conn.execute("SELECT COUNT(*) FROM batch_jobs").fetchone()[0]
-    ok &= check(f"batch_jobs loaded ({batch_count})", batch_count > 0)
+    ok &= check(f"employees loaded ({counts['employees']})", counts["employees"] > 40)
+    ok &= check(f"transactions loaded ({counts['transactions']})", counts["transactions"] > 5000)
+    ok &= check(f"access events loaded ({counts['access_events']})", counts["access_events"] > 11000)
+    ok &= check(f"config loaded ({counts['config']})", counts["config"] > 0)
+    ok &= check(f"batch_jobs loaded ({counts['batch_jobs']})", counts["batch_jobs"] > 0)
 
     # check provenance retained
     row = conn.execute("SELECT source_id, ingested_at FROM access_events LIMIT 1").fetchone()
-    ok &= check("provenance: source_id present", row["source_id"] is not None and row["source_id"] != "")
-    ok &= check("provenance: ingested_at present", row["ingested_at"] is not None and row["ingested_at"] != "")
-    
-    conn.close()
-
+    ok &= check("provenance: source_id present", row[0] is not None and row[0] != "")
+    ok &= check("provenance: ingested_at present", row[1] is not None and row[1] != "")
     conn.close()
 
     # now load bad data and check quarantine
@@ -334,7 +327,112 @@ def gate_cp5():
     return ok
 
 
-GATES = {0: gate_cp0, 1: gate_cp1, 2: gate_cp2, 3: gate_cp3, 4: gate_cp4, 5: gate_cp5}
+def gate_cp6():
+    print("\n--- CP6: Frontend foundation and alert queue ---\n")
+    import sys
+    import os
+    import time
+    import urllib.request
+    ok = True
+    
+    # Start backend
+    backend_proc = subprocess.Popen(
+        [sys.executable, "-m", "uvicorn", "main:app", "--host", "127.0.0.1", "--port", "8000"],
+        cwd=str(BACKEND),
+    )
+    
+    # Start frontend
+    frontend_proc = subprocess.Popen(
+        ["node", "node_modules/vite/bin/vite.js", "--port", "5173", "--strictPort"],
+        cwd=str(FRONTEND),
+    )
+    
+    # Wait for both to be up
+    time.sleep(5)
+    
+    try:
+        env = os.environ.copy()
+        env["FRONTEND_URL"] = "http://localhost:5173"
+        r = subprocess.run([sys.executable, "-m", "pytest", str(ROOT / "frontend" / "tests" / "test_ui_queue.py")], capture_output=True, text=True, env=env)
+        ok &= check("Playwright test suite passes (queue loaded, filters, performance)", r.returncode == 0, r.stdout + "\n" + r.stderr if r.returncode != 0 else "")
+    finally:
+        backend_proc.kill()
+        frontend_proc.kill()
+        backend_proc.wait()
+        frontend_proc.wait()
+    
+    return ok
+
+
+def gate_cp7():
+    print("\n--- CP7: Alert detail and investigation graph ---\n")
+    import subprocess
+    import time
+    ok = True
+    
+    # Start backend
+    backend_proc = subprocess.Popen(
+        [sys.executable, "-m", "uvicorn", "main:app", "--port", "8000"],
+        cwd=str(BACKEND),
+    )
+    
+    # Start frontend
+    frontend_proc = subprocess.Popen(
+        ["node", "node_modules/vite/bin/vite.js", "--port", "5173", "--strictPort"],
+        cwd=str(FRONTEND),
+    )
+    
+    # Wait for both to be up
+    time.sleep(5)
+    
+    try:
+        env = os.environ.copy()
+        env["FRONTEND_URL"] = "http://localhost:5173"
+        r = subprocess.run([sys.executable, "-m", "pytest", str(ROOT / "frontend" / "tests" / "test_ui_graph.py")], capture_output=True, text=True, env=env)
+        ok &= check("Playwright: S1 queue -> alert -> graph path; S4 monitored; S7 small peer group", r.returncode == 0, r.stdout + "\n" + r.stderr if r.returncode != 0 else "")
+    finally:
+        backend_proc.kill()
+        frontend_proc.kill()
+        backend_proc.wait()
+        frontend_proc.wait()
+    
+    return ok
+
+def gate_cp8():
+    print("\n--- CP8: Cases, Overview, Rule Performance, Data Replay ---\n")
+    import subprocess
+    import time
+    ok = True
+    
+    # Start backend
+    backend_proc = subprocess.Popen(
+        [sys.executable, "-m", "uvicorn", "main:app", "--port", "8000"],
+        cwd=str(BACKEND),
+    )
+    
+    # Start frontend
+    frontend_proc = subprocess.Popen(
+        ["node", "node_modules/vite/bin/vite.js", "--port", "5173", "--strictPort"],
+        cwd=str(FRONTEND),
+    )
+    
+    # Wait for both to be up
+    time.sleep(5)
+    
+    try:
+        env = os.environ.copy()
+        env["FRONTEND_URL"] = "http://localhost:5173"
+        r = subprocess.run([sys.executable, "-m", "pytest", str(ROOT / "frontend" / "tests" / "test_ui_demo.py")], capture_output=True, text=True, env=env)
+        ok &= check("Playwright: Full demo sequence (queue -> case -> export) passes", r.returncode == 0, r.stdout + "\n" + r.stderr if r.returncode != 0 else "")
+    finally:
+        backend_proc.kill()
+        frontend_proc.kill()
+        backend_proc.wait()
+        frontend_proc.wait()
+    
+    return ok
+
+GATES = {0: gate_cp0, 1: gate_cp1, 2: gate_cp2, 3: gate_cp3, 4: gate_cp4, 5: gate_cp5, 6: gate_cp6, 7: gate_cp7, 8: gate_cp8}
 
 
 def main():

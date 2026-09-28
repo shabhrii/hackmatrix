@@ -12,11 +12,18 @@ SEED_DIR = ROOT / "data" / "seed"
 
 
 def main():
+    import time
     start = time.time()
 
     # remove existing db
     if DB_PATH.exists():
-        DB_PATH.unlink()
+        for i in range(5):
+            try:
+                DB_PATH.unlink()
+                break
+            except PermissionError:
+                if i == 4: raise
+                time.sleep(0.5)
         print("Removed existing database.")
 
     # create schema

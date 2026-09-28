@@ -1,5 +1,11 @@
 import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom';
 import { useState } from 'react';
+import { AlertQueue } from './AlertQueue';
+import { AlertDetail } from './AlertDetail';
+import { Cases, CaseDetail } from './Cases';
+import { Overview } from './Overview';
+import { RulePerformance } from './RulePerformance';
+import { DataReplay } from './DataReplay';
 
 const ROLES = ['analyst', 'supervisor', 'admin'] as const;
 type Role = (typeof ROLES)[number];
@@ -58,12 +64,14 @@ function Shell() {
 
       <main className="content">
         <Routes>
-          <Route path="/" element={<Placeholder title="Overview" />} />
-          <Route path="/alerts" element={<Placeholder title="Alert queue" />} />
+          <Route path="/" element={<Overview />} />
+          <Route path="/alerts" element={<AlertQueue />} />
+          <Route path="/alerts/:id" element={<AlertDetail />} />
           <Route path="/graph" element={<Placeholder title="Investigation graph" />} />
-          <Route path="/cases" element={<Placeholder title="Cases" />} />
-          <Route path="/rules" element={<Placeholder title="Rule performance" />} />
-          <Route path="/replay" element={<Placeholder title="Data replay" />} />
+          <Route path="/cases" element={<Cases />} />
+          <Route path="/cases/:id" element={<CaseDetail />} />
+          <Route path="/rules" element={<RulePerformance />} />
+          <Route path="/replay" element={<DataReplay />} />
         </Routes>
       </main>
     </div>
