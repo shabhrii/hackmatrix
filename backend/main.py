@@ -118,13 +118,13 @@ def create_case(case: CaseCreate, request: Request):
 @app.get("/stats/overview")
 def get_overview():
     with get_db() as conn:
-        open_high = conn.execute("SELECT COUNT(*) FROM alerts WHERE status='open' AND severity='high'").fetchone()[0]
-        open_med = conn.execute("SELECT COUNT(*) FROM alerts WHERE status='open' AND severity='medium'").fetchone()[0]
-        by_rule_rows = conn.execute("SELECT json_extract(rule_ids, '$[0]') as r, COUNT(*) as c FROM alerts WHERE status='open' GROUP BY r").fetchall()
+        open_high = conn.execute("SELECT COUNT(*) FROM alerts WHERE status IN ('open','new') AND severity='high'").fetchone()[0]
+        open_med = conn.execute("SELECT COUNT(*) FROM alerts WHERE status IN ('open','new') AND severity='medium'").fetchone()[0]
+        by_rule_rows = conn.execute("SELECT json_extract(rule_ids, '$[0]') as r, COUNT(*) as c FROM alerts WHERE status IN ('open','new') GROUP BY r").fetchall()
         by_rule = {row[0]: row[1] for row in by_rule_rows if row[0]}
         
         # simple median evidence logic
-        ev_counts = [r[0] for r in conn.execute("SELECT json_array_length(evidence) FROM alerts").fetchall()]
+        ev_counts = [r[0] for r in conn.execute("SELECT evidence_count FROM alerts WHERE evidence_count IS NOT NULL").fetchall()]
         ev_counts.sort()
         med_ev = ev_counts[len(ev_counts)//2] if ev_counts else 0
         
@@ -208,7 +208,7 @@ def update_case(case_id: str, case: CaseUpdate, request: Request):
             params.append(str(time.time()))
             params.append(case_id)
             conn.execute(f"UPDATE cases SET {', '.join(updates)} WHERE case_id = ?", params)
-            log_audit(conn, request.state.user["user_id"], "update_case", "case", case_id, case.dict())
+            log_audit(conn, request.state.user["user_id"], "update_case", "case", case_id, case.model_dump())
             conn.commit()
             
         if case.status == "escalated":

@@ -436,6 +436,8 @@ GATES = {0: gate_cp0, 1: gate_cp1, 2: gate_cp2, 3: gate_cp3, 4: gate_cp4, 5: gat
 
 
 def main():
+    import json
+    (ROOT / ".ports.json").write_text(json.dumps({"backend": 8000, "frontend": 5173}))
     parser = argparse.ArgumentParser(description="SentinelGraph verification gates")
     parser.add_argument("--cp", type=int, required=True, help="Checkpoint number to verify")
     args = parser.parse_args()
